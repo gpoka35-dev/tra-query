@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#185FA5">
 <meta name="description" content="台鐵時刻查詢 - 起訖站快速查詢">
@@ -498,6 +499,8 @@ async function saveCredentials() {
     await getTdxToken();
     showToast('✓ 連線成功!設定已儲存');
     updateApiStatusUI();
+    // 連線成功後立即載入全車站清單
+    loadStationsFromTdx();
     setTimeout(() => closeModal('settingsModal'), 1000);
   } catch (e) {
     showToast('✗ 連線失敗:' + e.message);
@@ -527,59 +530,157 @@ function openSettings() {
 }
 
 // ============== STATION DATA ==============
-// TRA StationID 參考台鐵列車排點系統車站代碼
-const STATION_DATA = [
-  { region: '北部', name: '基隆', id: '0900' },
-  { region: '北部', name: '七堵', id: '0930' },
-  { region: '北部', name: '南港', id: '0980' },
-  { region: '北部', name: '松山', id: '0990' },
-  { region: '北部', name: '台北', id: '1000' },
-  { region: '北部', name: '萬華', id: '1010' },
-  { region: '北部', name: '板橋', id: '1020' },
-  { region: '北部', name: '樹林', id: '1030' },
-  { region: '北部', name: '桃園', id: '1080' },
-  { region: '北部', name: '中壢', id: '1100' },
-  { region: '北部', name: '新竹', id: '1210' },
-  { region: '北部', name: '竹南', id: '1240' },
-  { region: '中部', name: '苗栗', id: '3140' },
-  { region: '中部', name: '豐原', id: '3290' },
-  { region: '中部', name: '台中', id: '3300' },
-  { region: '中部', name: '彰化', id: '3360' },
-  { region: '中部', name: '員林', id: '3390' },
-  { region: '中部', name: '田中', id: '3420' },
-  { region: '中部', name: '斗六', id: '3470' },
-  { region: '中部', name: '嘉義', id: '4080' },
-  { region: '南部', name: '新營', id: '4150' },
-  { region: '南部', name: '台南', id: '4220' },
-  { region: '南部', name: '保安', id: '4250' },
-  { region: '南部', name: '高雄', id: '4400' },
-  { region: '南部', name: '鳳山', id: '4410' },
-  { region: '南部', name: '屏東', id: '5000' },
-  { region: '南部', name: '潮州', id: '5050' },
-  { region: '東部', name: '宜蘭', id: '7190' },
-  { region: '東部', name: '羅東', id: '7210' },
-  { region: '東部', name: '蘇澳', id: '7250' },
-  { region: '東部', name: '花蓮', id: '7000' },
-  { region: '東部', name: '玉里', id: '6130' },
-  { region: '東部', name: '池上', id: '6160' },
-  { region: '東部', name: '台東', id: '6210' },
-  { region: '其他', name: '福隆', id: '7110' },
-  { region: '其他', name: '頭城', id: '7150' },
-  { region: '其他', name: '雙溪', id: '7100' },
-  { region: '其他', name: '瑞芳', id: '7060' },
-  { region: '其他', name: '南澳', id: '7290' },
-  { region: '其他', name: '和平', id: '7330' },
-  { region: '其他', name: '新城', id: '7370' },
-  { region: '其他', name: '富里', id: '6140' },
-  { region: '其他', name: '關山', id: '6170' }
+// 完整台鐵車站 fallback 名單(StationID 來自 TDX TRA 列車排點系統車站代碼)
+// 第一次連 TDX 成功後會用 API 真實資料覆蓋此名單
+const STATION_FALLBACK = [
+  // 縱貫線北段 0900~1240
+  ['基隆','0900','北部'],['三坑','0910','北部'],['八堵','0920','北部'],['七堵','0930','北部'],
+  ['百福','0940','北部'],['五堵','0950','北部'],['汐止','0960','北部'],['汐科','0970','北部'],
+  ['南港','0980','北部'],['松山','0990','北部'],['台北','1000','北部'],['萬華','1010','北部'],
+  ['板橋','1020','北部'],['浮洲','1030','北部'],['樹林','1040','北部'],['南樹林','1050','北部'],
+  ['山佳','1060','北部'],['鶯歌','1070','北部'],['桃園','1080','北部'],['內壢','1090','北部'],
+  ['中壢','1100','北部'],['埔心','1110','北部'],['楊梅','1120','北部'],['富岡','1130','北部'],
+  ['新富','1140','北部'],['北湖','1150','北部'],['湖口','1160','北部'],['新豐','1170','北部'],
+  ['竹北','1180','北部'],['北新竹','1190','北部'],['新竹','1210','北部'],['三姓橋','1220','北部'],
+  ['香山','1230','北部'],['崎頂','1240','北部'],
+  // 內灣線/六家線
+  ['千甲','1191','內灣支線'],['新莊','1192','內灣支線'],['竹中','1193','內灣支線'],
+  ['六家','1194','內灣支線'],['上員','1195','內灣支線'],['榮華','1196','內灣支線'],
+  ['竹東','1197','內灣支線'],['橫山','1198','內灣支線'],['九讚頭','1199','內灣支線'],
+  ['合興','1201','內灣支線'],['富貴','1202','內灣支線'],['內灣','1203','內灣支線'],
+  // 山線
+  ['竹南','3140','中部'],['造橋','3150','中部'],['豐富','3160','中部'],['苗栗','3170','中部'],
+  ['南勢','3180','中部'],['銅鑼','3190','中部'],['三義','3210','中部'],['泰安','3220','中部'],
+  ['后里','3230','中部'],['豐原','3240','中部'],['栗林','3250','中部'],['潭子','3260','中部'],
+  ['頭家厝','3270','中部'],['松竹','3280','中部'],['太原','3290','中部'],['精武','3300','中部'],
+  ['台中','3310','中部'],['五權','3320','中部'],['大慶','3330','中部'],['烏日','3340','中部'],
+  ['新烏日','3350','中部'],['成功','3360','中部'],['彰化','3370','中部'],
+  // 海線
+  ['談文','4070','海線'],['大山','4080','海線'],['後龍','4090','海線'],['龍港','4100','海線'],
+  ['白沙屯','4110','海線'],['新埔','4120','海線'],['通霄','4130','海線'],['苑裡','4140','海線'],
+  ['日南','4150','海線'],['大甲','4160','海線'],['台中港','4170','海線'],['清水','4180','海線'],
+  ['沙鹿','4190','海線'],['龍井','4200','海線'],['大肚','4210','海線'],['追分','4220','海線'],
+  // 縱貫線中段 (彰化-嘉義)
+  ['花壇','3380','中部'],['大村','3390','中部'],['員林','3400','中部'],['永靖','3410','中部'],
+  ['社頭','3420','中部'],['田中','3430','中部'],['二水','3440','中部'],['林內','3450','中部'],
+  ['石榴','3460','中部'],['斗六','3470','中部'],['斗南','4050','中部'],['石龜','4060','中部'],
+  ['大林','4070','中部'],['民雄','4080','中部'],['嘉北','4090','中部'],['嘉義','4100','中部'],
+  // 集集線
+  ['源泉','2901','集集支線'],['濁水','2902','集集支線'],['龍泉','2903','集集支線'],
+  ['集集','2904','集集支線'],['水里','2905','集集支線'],['車埕','2906','集集支線'],
+  // 縱貫線南段
+  ['水上','4110','南部'],['南靖','4120','南部'],['後壁','4130','南部'],['新營','4140','南部'],
+  ['柳營','4150','南部'],['林鳳營','4160','南部'],['隆田','4170','南部'],['拔林','4180','南部'],
+  ['善化','4190','南部'],['南科','4200','南部'],['新市','4210','南部'],['永康','4220','南部'],
+  ['大橋','4250','南部'],['台南','4260','南部'],['保安','4270','南部'],['仁德','4280','南部'],
+  ['中洲','4290','南部'],['大湖','4300','南部'],['路竹','4310','南部'],['岡山','4320','南部'],
+  ['橋頭','4330','南部'],['楠梓','4340','南部'],['新左營','4350','南部'],['左營','4360','南部'],
+  ['內惟','4370','南部'],['美術館','4380','南部'],['鼓山','4390','南部'],['三塊厝','4400','南部'],
+  ['高雄','4410','南部'],['民族','4420','南部'],['科工館','4430','南部'],['正義','4440','南部'],
+  ['鳳山','4450','南部'],['後庄','4460','南部'],['九曲堂','4470','南部'],['六塊厝','4480','南部'],
+  ['屏東','4490','南部'],['歸來','5000','南部'],['麟洛','5010','南部'],['西勢','5020','南部'],
+  ['竹田','5030','南部'],['潮州','5040','南部'],['崁頂','5050','南部'],['南州','5060','南部'],
+  ['鎮安','5070','南部'],['林邊','5080','南部'],['佳冬','5090','南部'],['東海','5100','南部'],
+  ['枋寮','5110','南部'],
+  // 南迴線
+  ['加祿','5120','南迴線'],['內獅','5130','南迴線'],['枋山','5140','南迴線'],
+  ['古莊','5150','南迴線'],['大武','5170','南迴線'],['瀧溪','5180','南迴線'],
+  ['金崙','5190','南迴線'],['太麻里','5200','南迴線'],['知本','5210','南迴線'],
+  ['康樂','5220','南迴線'],
+  // 花東線
+  ['台東','6210','東部'],['山里','6190','東部'],['鹿野','6180','東部'],['瑞源','6170','東部'],
+  ['瑞和','6160','東部'],['關山','6150','東部'],['海端','6140','東部'],['池上','6130','東部'],
+  ['富里','6120','東部'],['東竹','6110','東部'],['東里','6100','東部'],['玉里','6080','東部'],
+  ['三民','6070','東部'],['瑞穗','6060','東部'],['富源','6050','東部'],['大富','6040','東部'],
+  ['光復','6030','東部'],['萬榮','6020','東部'],['鳳林','6010','東部'],['南平','6000','東部'],
+  ['林榮新光','5990','東部'],['豐田','5980','東部'],['壽豐','5970','東部'],['平和','5960','東部'],
+  ['志學','5950','東部'],['吉安','5940','東部'],['花蓮','7000','東部'],
+  // 北迴線
+  ['北埔','7010','東部'],['景美','7020','東部'],['新城','7030','東部'],['崇德','7040','東部'],
+  ['和仁','7050','東部'],['和平','7060','東部'],['漢本','7070','東部'],['武塔','7080','東部'],
+  ['南澳','7090','東部'],['東澳','7100','東部'],['永樂','7110','東部'],['蘇澳','7120','東部'],
+  ['蘇澳新','7130','東部'],
+  // 宜蘭線
+  ['新馬','7140','東部'],['冬山','7150','東部'],['羅東','7160','東部'],['中里','7170','東部'],
+  ['二結','7180','東部'],['宜蘭','7190','東部'],['四城','7200','東部'],['礁溪','7210','東部'],
+  ['頂埔','7220','東部'],['頭城','7230','東部'],['外澳','7240','東部'],['龜山','7250','東部'],
+  ['大溪','7260','東部'],['大里','7270','東部'],['石城','7280','東部'],['福隆','7290','東部'],
+  ['貢寮','7300','東部'],['雙溪','7310','東部'],['牡丹','7320','東部'],['三貂嶺','7330','東部'],
+  // 平溪線
+  ['大華','7331','平溪支線'],['十分','7332','平溪支線'],['望古','7333','平溪支線'],
+  ['嶺腳','7334','平溪支線'],['平溪','7335','平溪支線'],['菁桐','7336','平溪支線'],
+  // 縱貫線北段(瑞芳支)
+  ['猴硐','7340','北部'],['瑞芳','7350','北部'],['四腳亭','7360','北部'],['暖暖','7370','北部'],
+  // 深澳線
+  ['海科館','7341','深澳支線'],['八斗子','7342','深澳支線']
 ];
 
-const STATIONS_BY_REGION = STATION_DATA.reduce((acc, s) => {
-  (acc[s.region] = acc[s.region] || []).push(s);
-  return acc;
-}, {});
+let STATION_DATA = STATION_FALLBACK.map(([name, id, region]) => ({ name, id, region }));
+
+// 區域排序
+const REGION_ORDER = ['北部','中部','海線','南部','東部','南迴線','內灣支線','集集支線','平溪支線','深澳支線','其他'];
+
+let STATIONS_BY_REGION = {};
+function rebuildStationIndex() {
+  STATIONS_BY_REGION = {};
+  STATION_DATA.forEach(s => {
+    (STATIONS_BY_REGION[s.region] = STATIONS_BY_REGION[s.region] || []).push(s);
+  });
+}
+rebuildStationIndex();
 
 function findStation(name) { return STATION_DATA.find(s => s.name === name); }
+
+// 嘗試從 TDX 抓真實全車站名單,成功則覆蓋本機 fallback
+async function loadStationsFromTdx() {
+  if (!getCredentials()) return;
+  const cached = localStorage.getItem('tdx_stations_v2');
+  const cachedTime = parseInt(localStorage.getItem('tdx_stations_v2_time') || '0');
+  // 7 天有效
+  if (cached && Date.now() - cachedTime < 7*24*60*60*1000) {
+    try {
+      STATION_DATA = JSON.parse(cached);
+      rebuildStationIndex();
+      return;
+    } catch (e) {}
+  }
+  try {
+    const url = `${TDX_API_BASE}/Station?%24format=JSON`;
+    const data = await tdxFetch(url);
+    const arr = data?.Stations || data;
+    if (!Array.isArray(arr) || arr.length === 0) return;
+
+    const stations = arr.map(item => {
+      const id = item.StationID || item.StationCode;
+      const name = item.StationName?.Zh_tw || item.StationName || '';
+      // 用 ID 推斷分區
+      const idNum = parseInt(id) || 0;
+      let region = '其他';
+      if (idNum >= 900 && idNum < 1300) region = '北部';
+      else if (idNum >= 2900 && idNum < 2910) region = '集集支線';
+      else if (idNum >= 3140 && idNum < 3380) region = '中部';
+      else if (idNum >= 3380 && idNum < 4070) region = '中部';
+      else if (idNum >= 4070 && idNum < 4230) region = '海線';
+      else if (idNum >= 4100 && idNum < 5120) region = '南部';
+      else if (idNum >= 5120 && idNum < 5230) region = '南迴線';
+      else if (idNum >= 5940 && idNum < 7000) region = '東部';
+      else if (idNum >= 7000 && idNum < 7140) region = '東部';
+      else if (idNum >= 7140 && idNum < 7340) region = '東部';
+      else if (idNum >= 7340 && idNum < 7400) region = '北部';
+      return { name, id, region };
+    }).filter(s => s.name && s.id);
+
+    if (stations.length >= 50) {
+      STATION_DATA = stations;
+      rebuildStationIndex();
+      localStorage.setItem('tdx_stations_v2', JSON.stringify(stations));
+      localStorage.setItem('tdx_stations_v2_time', String(Date.now()));
+      console.log(`[TDX] 載入 ${stations.length} 個車站`);
+    }
+  } catch (e) {
+    console.warn('[TDX] 車站清單載入失敗,使用內建 fallback:', e.message);
+  }
+}
 
 // ============== STATE ==============
 let state = {
@@ -660,15 +761,44 @@ function renderStations(filter) {
   const list = document.getElementById('stationList');
   list.innerHTML = '';
   const current = state.selectingStation === 'from' ? state.from : state.to;
-  for (const [region, stations] of Object.entries(STATIONS_BY_REGION)) {
-    const filtered = stations.filter(s => !filter || s.name.includes(filter));
-    if (filtered.length === 0) continue;
+
+  // 有搜尋字串時:跨區整合顯示為單一「搜尋結果」清單
+  if (filter) {
+    const allMatches = STATION_DATA.filter(s => s.name.includes(filter));
+    if (allMatches.length === 0) {
+      list.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#A0A0A8"><div style="font-size:36px;margin-bottom:8px">🔍</div>找不到「' + filter + '」相關車站</div>';
+      return;
+    }
     const group = document.createElement('div');
     group.className = 'station-group';
-    group.innerHTML = '<div class="group-title">' + region + '</div>';
+    group.innerHTML = '<div class="group-title">搜尋結果 (' + allMatches.length + ' 站)</div>';
     const grid = document.createElement('div');
     grid.className = 'station-list';
-    filtered.forEach(s => {
+    allMatches.forEach(s => {
+      const btn = document.createElement('button');
+      btn.className = 'station-item' + (s.name === current ? ' selected' : '');
+      btn.textContent = s.name;
+      btn.onclick = () => selectStation(s.name);
+      grid.appendChild(btn);
+    });
+    group.appendChild(grid);
+    list.appendChild(group);
+    return;
+  }
+
+  // 無搜尋字串:依 REGION_ORDER 順序顯示
+  const orderedRegions = REGION_ORDER.filter(r => STATIONS_BY_REGION[r])
+    .concat(Object.keys(STATIONS_BY_REGION).filter(r => !REGION_ORDER.includes(r)));
+
+  for (const region of orderedRegions) {
+    const stations = STATIONS_BY_REGION[region] || [];
+    if (stations.length === 0) continue;
+    const group = document.createElement('div');
+    group.className = 'station-group';
+    group.innerHTML = '<div class="group-title">' + region + ' (' + stations.length + ')</div>';
+    const grid = document.createElement('div');
+    grid.className = 'station-list';
+    stations.forEach(s => {
       const btn = document.createElement('button');
       btn.className = 'station-item' + (s.name === current ? ' selected' : '');
       btn.textContent = s.name;
@@ -1104,6 +1234,9 @@ function goBack() {
 // ============== INIT ==============
 updateApiStatusUI();
 updateUI();
+
+// 嘗試從 TDX 載入全車站資料(已設定金鑰才執行)
+loadStationsFromTdx();
 
 // First-run hint
 if (!getCredentials() && !localStorage.getItem('first_run_hint')) {
