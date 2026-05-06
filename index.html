@@ -791,13 +791,18 @@ document.getElementById('trainTypes').addEventListener('click', (e) => {
 
 // ============== TRAIN TYPE MAP ==============
 // TDX API TrainTypeID 對應
+// 1=自強, 2=莒光, 3=自強(3000), 6=區間, 11=區間快, 等等
 function getTrainTypeInfo(typeId, typeName) {
-  if (typeId === '11' || typeName?.includes('區間快')) return { name: '區間快', class: 'type-loc-fast' };
-  if (typeId === '6' || typeName?.includes('區間')) return { name: '區間', class: 'type-loc' };
-  if (typeId === '2' || typeName?.includes('莒光')) return { name: '莒光', class: 'type-cm' };
-  if (typeId === '3' || typeName?.includes('3000')) return { name: '自強 3000', class: 'type-313' };
-  if (typeId === '1' || typeName?.includes('自強')) return { name: '自強', class: 'type-eq' };
-  return { name: typeName || '其他', class: 'type-loc' };
+  const n = (typeName || '').toString();
+  if (typeId === '11' || n.includes('區間快')) return { name: '區間快', class: 'type-loc-fast' };
+  if (typeId === '6' || (n.includes('區間') && !n.includes('區間快'))) return { name: '區間', class: 'type-loc' };
+  if (typeId === '2' || n.includes('莒光')) return { name: '莒光', class: 'type-cm' };
+  if (typeId === '3' || n.includes('3000') || n.includes('EMU3000')) return { name: '自強 3000', class: 'type-313' };
+  if (n.includes('普悠瑪')) return { name: '普悠瑪', class: 'type-313' };
+  if (n.includes('太魯閣')) return { name: '太魯閣', class: 'type-313' };
+  if (typeId === '1' || n.includes('自強')) return { name: '自強', class: 'type-eq' };
+  if (n.includes('復興')) return { name: '復興', class: 'type-loc' };
+  return { name: n || '其他', class: 'type-loc' };
 }
 
 function fmtDate(d) {
@@ -897,7 +902,21 @@ async function search() {
     try {
       const data = await fetchODTrains(fromS.id, toS.id, fmtDate(queryDate));
       trains = parseODResponse(data);
-      isLive = true;
+      // 健全性檢查:若 API 回了班次但時間全部解析失敗,視為 parse 失敗
+      if (trains.length > 0) {
+        const validCount = trains.filter(t => t.depMin > 0 || t.arrMin > 0).length;
+        if (validCount === 0) {
+          // 全部時間都是 00:00,parse 出問題
+          window._tdxLastRawData = data; // 存起來方便 debug
+          errorMsg = '時刻欄位解析失敗。請打開瀏覽器 F12 → Console 看「[TDX] 第一筆原始資料」並回報';
+          trains = [];
+        } else {
+          isLive = true;
+        }
+      } else {
+        // 完全沒回任何班次
+        errorMsg = '此路線/日期無班次資料';
+      }
     } catch (e) {
       console.error(e);
       errorMsg = e.message;
@@ -929,29 +948,84 @@ async function search() {
   renderResult(trains, queryDate, filterStartMin, isLive, errorMsg);
 }
 
+// 從可能巢狀的物件中抽取字串,嘗試多種欄位路徑
+function pickStr(obj, ...paths) {
+  if (!obj) return '';
+  for (const path of paths) {
+    const keys = path.split('.');
+    let v = obj;
+    for (const k of keys) {
+      if (v == null) break;
+      v = v[k];
+    }
+    if (typeof v === 'string' && v) return v;
+    if (typeof v === 'number') return String(v);
+  }
+  return '';
+}
+
+function pickName(obj) {
+  // 處理 {Zh_tw, En} 形式或單純字串
+  if (!obj) return '';
+  if (typeof obj === 'string') return obj;
+  return obj.Zh_tw || obj.zh_tw || obj.ZhTw || obj.Zh || obj.En || '';
+}
+
 function parseODResponse(data) {
-  // TDX OD response: data.TrainTimetables[].{TrainInfo, OriginStopTime, DestinationStopTime}
-  const rows = data?.TrainTimetables || [];
+  // 嘗試各種可能的根欄位名稱
+  const rows = data?.TrainTimetables || data?.TrainTimetable || data?.UpdateTime
+    ? (data?.TrainTimetables || data?.TrainTimetable || [])
+    : (Array.isArray(data) ? data : []);
+
+  if (!rows.length) {
+    console.warn('[TDX] 無 TrainTimetables 資料,完整回傳:', data);
+    return [];
+  }
+
+  // Debug: 印出第一筆完整結構,方便日後排查
+  console.log('[TDX] 第一筆原始資料:', JSON.stringify(rows[0], null, 2));
+
   return rows.map(item => {
-    const info = item.TrainInfo || {};
-    const orig = item.OriginStopTime || {};
-    const dest = item.DestinationStopTime || {};
-    const typeId = String(info.TrainTypeID || '');
-    const typeName = info.TrainTypeName?.Zh_tw || info.TrainTypeName || '';
+    // TrainInfo 可能在不同層級
+    const info = item.TrainInfo || item;
+    // 起訖站時刻表可能叫 OriginStopTime/DestinationStopTime,
+    // 或在 v3 改名為 StopTimes 陣列(第一筆與最後一筆)
+    let orig = item.OriginStopTime;
+    let dest = item.DestinationStopTime;
+    if (!orig || !dest) {
+      const stops = item.StopTimes || info.StopTimes;
+      if (Array.isArray(stops) && stops.length >= 2) {
+        orig = orig || stops[0];
+        dest = dest || stops[stops.length - 1];
+      }
+    }
+    orig = orig || {};
+    dest = dest || {};
+
+    const typeId = pickStr(info, 'TrainTypeID', 'TrainTypeCode');
+    const typeName = pickName(info.TrainTypeName) || pickStr(info, 'TrainTypeName');
     const ti = getTrainTypeInfo(typeId, typeName);
-    const depMin = timeStrToMin(orig.DepartureTime);
-    const arrMin = timeStrToMin(dest.ArrivalTime);
+
+    // 出發/到達時間欄位嘗試多種命名
+    const depTime = pickStr(orig, 'DepartureTime', 'departureTime', 'DepTime')
+                 || pickStr(orig, 'ArrivalTime'); // 起站可能只有 ArrivalTime
+    const arrTime = pickStr(dest, 'ArrivalTime', 'arrivalTime', 'ArrTime')
+                 || pickStr(dest, 'DepartureTime'); // 終站可能只有 DepartureTime
+
+    const depMin = timeStrToMin(depTime);
+    const arrMin = timeStrToMin(arrTime);
     let dur = arrMin - depMin;
     if (dur < 0) dur += 24*60;
+
     return {
-      no: String(info.TrainNo || ''),
+      no: pickStr(info, 'TrainNo', 'TrainNumber'),
       typeName: ti.name, typeClass: ti.class,
-      depTime: orig.DepartureTime,
-      arrTime: dest.ArrivalTime,
+      depTime, arrTime,
       depMin, arrMin,
       duration: fmtDur(dur)
     };
-  }).sort((a,b) => a.depMin - b.depMin);
+  }).filter(t => t.no && t.depTime && t.arrTime)
+    .sort((a,b) => a.depMin - b.depMin);
 }
 
 function renderResult(trains, queryDate, filterStartMin, isLive, errorMsg) {
