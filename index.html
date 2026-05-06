@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#185FA5">
+<meta name="description" content="台鐵時刻查詢 - 起訖站快速查詢">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>台鐵時刻查詢</title>
+<style>
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei", "Helvetica Neue", sans-serif;
+  background: #F5F5F7;
+  color: #1C1C1E;
+  font-size: 18px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+.app { max-width: 480px; margin: 0 auto; min-height: 100vh; background: #F5F5F7; }
+.header {
+  background: #185FA5; color: white; padding: 16px 20px;
+  font-size: 22px; font-weight: 600; text-align: center;
+  position: sticky; top: 0; z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.header-title { flex: 1; text-align: center; }
+.icon-btn {
+  background: transparent; color: white; border: none;
+  font-size: 22px; padding: 6px 10px; cursor: pointer;
+  border-radius: 8px; min-width: 44px;
+}
+.icon-btn:active { background: rgba(255,255,255,0.2); }
+.back-btn {
+  background: transparent; color: white; border: none;
+  font-size: 18px; padding: 8px 12px; cursor: pointer;
+  border-radius: 8px;
+}
+.back-btn:active { background: rgba(255,255,255,0.2); }
+.page { padding: 16px; }
+.card {
+  background: white; border-radius: 14px; padding: 18px;
+  margin-bottom: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.label {
+  font-size: 17px; color: #6B6B70; margin-bottom: 10px;
+  font-weight: 500; display: flex; justify-content: space-between; align-items: center;
+}
+.optional-tag {
+  font-size: 13px; color: #A0A0A8; font-weight: 400;
+  background: #F2F2F7; padding: 3px 10px; border-radius: 10px;
+}
+.row { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; }
+.row-label {
+  width: 56px; font-size: 19px; font-weight: 600;
+  color: #1C1C1E; flex-shrink: 0;
+}
+.row-label .req { color: #D85A30; font-size: 14px; margin-left: 2px; }
+.station-btn {
+  flex: 1; padding: 20px 18px; font-size: 24px; font-weight: 600;
+  text-align: left; background: #F2F2F7; border: 1.5px solid #E5E5EA;
+  border-radius: 12px; color: #1C1C1E; cursor: pointer;
+  min-height: 68px; font-family: inherit;
+}
+.station-btn:active { background: #E5E5EA; transform: scale(0.99); }
+.station-btn.empty { color: #A0A0A8; font-weight: 400; }
+.swap-btn {
+  width: 100%; padding: 14px; font-size: 16px; background: white;
+  border: 1.5px dashed #C7C7CC; border-radius: 12px; color: #185FA5;
+  cursor: pointer; margin: 4px 0 14px; font-family: inherit; font-weight: 500;
+}
+.swap-btn:active { background: #F2F2F7; }
+.time-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px; }
+.time-btn {
+  padding: 18px 12px; font-size: 20px; font-weight: 600;
+  background: #F2F2F7; border: 1.5px solid #E5E5EA;
+  border-radius: 12px; color: #1C1C1E; cursor: pointer;
+  min-height: 64px; font-family: inherit; position: relative;
+}
+.time-btn:active { background: #E5E5EA; transform: scale(0.99); }
+.time-btn.empty { color: #A0A0A8; font-weight: 400; }
+.time-btn.has-value { background: #E6F1FB; border-color: #185FA5; color: #0C447C; }
+.clear-row { display: flex; justify-content: flex-end; margin-bottom: 14px; min-height: 28px; }
+.clear-btn {
+  background: transparent; border: none; color: #185FA5;
+  font-size: 15px; font-weight: 500; cursor: pointer;
+  padding: 6px 12px; font-family: inherit;
+}
+.clear-btn:active { background: #F2F2F7; border-radius: 6px; }
+.train-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+.chip {
+  padding: 14px 8px; font-size: 17px; font-weight: 500;
+  background: white; border: 1.5px solid #E5E5EA;
+  border-radius: 12px; cursor: pointer; text-align: center;
+  min-height: 52px; font-family: inherit; color: #1C1C1E;
+}
+.chip.active { background: #E6F1FB; border: 2px solid #185FA5; color: #0C447C; font-weight: 600; }
+.chip:active { transform: scale(0.98); }
+.search-btn {
+  width: 100%; padding: 24px; font-size: 24px; font-weight: 700;
+  background: #185FA5; color: white; border: none;
+  border-radius: 14px; cursor: pointer; min-height: 76px;
+  margin-top: 10px; font-family: inherit; letter-spacing: 4px;
+}
+.search-btn:active { background: #0C447C; transform: scale(0.99); }
+.search-btn:disabled { background: #C7C7CC; }
+
+.result-card {
+  background: white; border-radius: 14px; padding: 18px 20px;
+  margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  cursor: pointer;
+}
+.result-card:active { transform: scale(0.99); }
+.result-card.past { opacity: 0.55; }
+.result-head {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 14px; padding-bottom: 10px;
+  border-bottom: 1px solid #F2F2F7;
+}
+.train-no { font-size: 20px; font-weight: 700; }
+.train-type {
+  font-size: 14px; font-weight: 600; padding: 5px 12px; border-radius: 8px;
+}
+.type-313 { background: #FAECE7; color: #712B13; }
+.type-eq { background: #E1F5EE; color: #085041; }
+.type-cm { background: #EEEDFE; color: #3C3489; }
+.type-loc-fast { background: #FAEEDA; color: #633806; }
+.type-loc { background: #F1EFE8; color: #444441; }
+.times { display: flex; align-items: center; justify-content: space-between; }
+.time-block { text-align: center; flex: 1; }
+.time-big {
+  font-size: 30px; font-weight: 700;
+  font-variant-numeric: tabular-nums; color: #1C1C1E;
+}
+.time-station { font-size: 15px; color: #6B6B70; margin-top: 2px; }
+.arrow { color: #C7C7CC; font-size: 22px; margin: 0 8px; }
+.duration {
+  font-size: 15px; color: #6B6B70; margin-top: 10px;
+  text-align: center; padding-top: 8px; border-top: 1px solid #F2F2F7;
+}
+
+.divider-now {
+  display: flex; align-items: center; gap: 10px;
+  margin: 16px 4px 12px; color: #D85A30;
+  font-size: 14px; font-weight: 600;
+}
+.divider-now::before, .divider-now::after {
+  content: ''; flex: 1; height: 1.5px;
+  background: #D85A30; opacity: 0.4;
+}
+
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+  z-index: 200; display: none;
+  align-items: flex-end; justify-content: center;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: white; width: 100%; max-width: 480px;
+  max-height: 85vh; border-radius: 20px 20px 0 0;
+  display: flex; flex-direction: column;
+  animation: slideUp 0.2s ease-out;
+}
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.modal-head {
+  padding: 18px 20px; border-bottom: 1px solid #F2F2F7;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.modal-title { font-size: 20px; font-weight: 700; }
+.modal-close {
+  background: transparent; border: none; font-size: 18px;
+  color: #185FA5; cursor: pointer; padding: 8px 12px;
+  font-family: inherit; font-weight: 600;
+}
+.search-input {
+  width: 100%; padding: 14px 16px; font-size: 18px;
+  border: 1.5px solid #E5E5EA; border-radius: 10px;
+  font-family: inherit; margin: 12px 0;
+}
+.search-input:focus { outline: none; border-color: #185FA5; }
+.modal-body { padding: 0 20px 20px; overflow-y: auto; flex: 1; }
+.station-group { margin-bottom: 12px; }
+.group-title {
+  font-size: 15px; color: #6B6B70; font-weight: 600;
+  padding: 12px 0 6px; position: sticky; top: 0; background: white;
+}
+.station-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.station-item {
+  padding: 16px 12px; font-size: 19px; font-weight: 500;
+  background: #F2F2F7; border: 1.5px solid transparent;
+  border-radius: 10px; text-align: center; cursor: pointer;
+  font-family: inherit; color: #1C1C1E; min-height: 56px;
+}
+.station-item:active { background: #E5E5EA; }
+.station-item.selected {
+  background: #E6F1FB; border-color: #185FA5;
+  color: #0C447C; font-weight: 700;
+}
+.time-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
+.time-cell {
+  padding: 14px 4px; font-size: 18px; font-weight: 600;
+  background: #F2F2F7; border: 1.5px solid transparent;
+  border-radius: 10px; text-align: center; cursor: pointer;
+  font-family: inherit; font-variant-numeric: tabular-nums;
+}
+.time-cell:active { background: #E5E5EA; }
+.time-cell.selected { background: #E6F1FB; border-color: #185FA5; color: #0C447C; }
+
+.empty-state { text-align: center; padding: 60px 20px; color: #6B6B70; }
+.empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+.empty-state .title { font-size: 18px; font-weight: 600; margin-bottom: 6px; color: #1C1C1E; }
+.empty-state .sub { font-size: 15px; }
+
+.result-summary {
+  background: white; border-radius: 14px; padding: 14px 18px;
+  margin-bottom: 14px; font-size: 16px; color: #1C1C1E;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.result-summary .route { font-size: 19px; font-weight: 700; margin-bottom: 4px; }
+.result-summary .meta { font-size: 14px; color: #6B6B70; }
+.result-summary .data-source {
+  font-size: 12px; color: #A0A0A8; margin-top: 4px; padding-top: 6px;
+  border-top: 1px solid #F2F2F7;
+}
+.data-source.live { color: #085041; }
+.data-source.demo { color: #B45309; }
+
+.toast {
+  position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,0.8); color: white; padding: 12px 24px;
+  border-radius: 24px; font-size: 16px; z-index: 300;
+  opacity: 0; transition: opacity 0.3s; pointer-events: none;
+  max-width: 90%; text-align: center;
+}
+.toast.show { opacity: 1; }
+
+.loading {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 80px 20px; color: #6B6B70;
+}
+.spinner {
+  width: 40px; height: 40px; border: 4px solid #E5E5EA;
+  border-top-color: #185FA5; border-radius: 50%;
+  animation: spin 0.8s linear infinite; margin-bottom: 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.settings-form { padding: 4px 0; }
+.settings-form label {
+  display: block; font-size: 16px; font-weight: 600;
+  margin: 14px 0 6px; color: #1C1C1E;
+}
+.settings-form input {
+  width: 100%; padding: 14px 16px; font-size: 16px;
+  border: 1.5px solid #E5E5EA; border-radius: 10px;
+  font-family: inherit;
+}
+.settings-form input:focus { outline: none; border-color: #185FA5; }
+.settings-form .help {
+  font-size: 13px; color: #6B6B70; margin-top: 6px; line-height: 1.5;
+}
+.settings-form .help a { color: #185FA5; text-decoration: none; }
+.status-pill {
+  display: inline-block; font-size: 13px; padding: 4px 10px;
+  border-radius: 12px; font-weight: 600; margin-left: 8px;
+}
+.status-ok { background: #E1F5EE; color: #085041; }
+.status-no { background: #FAECE7; color: #712B13; }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+<div class="header">
+  <button class="back-btn" id="backBtn" style="display:none" onclick="goBack()">← 返回</button>
+  <span class="header-title" id="headerTitle">台鐵時刻查詢</span>
+  <button class="icon-btn" id="settingsBtn" onclick="openSettings()" title="設定">⚙</button>
+</div>
+
+<div class="page" id="searchPage">
+  <div class="card">
+    <div class="row">
+      <span class="row-label">起站<span class="req">*</span></span>
+      <button class="station-btn empty" id="fromBtn" onclick="openStation('from')">請選擇</button>
+    </div>
+    <div class="row">
+      <span class="row-label">訖站<span class="req">*</span></span>
+      <button class="station-btn empty" id="toBtn" onclick="openStation('to')">請選擇</button>
+    </div>
+    <button class="swap-btn" onclick="swapStations()">↑↓ 交換起訖站</button>
+
+    <div class="label">
+      <span>出發日期與時間</span>
+      <span class="optional-tag">選填</span>
+    </div>
+    <div class="time-row">
+      <button class="time-btn empty" id="dateBtn" onclick="openDate()">今天</button>
+      <button class="time-btn empty" id="timeBtn" onclick="openTime()">不指定</button>
+    </div>
+    <div class="clear-row">
+      <button class="clear-btn" id="clearBtn" onclick="clearDateTime()" style="display:none">清除日期與時間</button>
+    </div>
+
+    <span class="label" style="display:block">車種</span>
+    <div class="train-row" id="trainTypes">
+      <button class="chip active" data-type="ALL">全部車種</button>
+      <button class="chip" data-type="3">自強(3000)</button>
+      <button class="chip" data-type="1">自強</button>
+      <button class="chip" data-type="2">莒光</button>
+      <button class="chip" data-type="11">區間快</button>
+      <button class="chip" data-type="6">區間</button>
+    </div>
+
+    <button class="search-btn" onclick="search()">查 詢 車 次</button>
+  </div>
+</div>
+
+<div class="page" id="resultPage" style="display:none">
+  <div id="resultContent"></div>
+</div>
+
+</div>
+
+<div class="modal-overlay" id="stationModal" onclick="if(event.target===this)closeModal('stationModal')">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="modal-title" id="stationModalTitle">選擇車站</span>
+      <button class="modal-close" onclick="closeModal('stationModal')">關閉</button>
+    </div>
+    <div style="padding: 0 20px;">
+      <input class="search-input" id="stationSearch" placeholder="搜尋車站名稱..." oninput="filterStations()">
+    </div>
+    <div class="modal-body" id="stationList"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="dateModal" onclick="if(event.target===this)closeModal('dateModal')">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="modal-title">選擇日期</span>
+      <button class="modal-close" onclick="closeModal('dateModal')">關閉</button>
+    </div>
+    <div class="modal-body" id="dateList"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="timeModal" onclick="if(event.target===this)closeModal('timeModal')">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="modal-title">選擇時間</span>
+      <button class="modal-close" onclick="closeModal('timeModal')">關閉</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:14px;color:#6B6B70;padding:8px 0;">不選擇時間則列出當日全部班次</div>
+      <div style="font-size:16px;color:#6B6B70;font-weight:600;padding:12px 0 8px;">小時</div>
+      <div class="time-grid" id="hourGrid"></div>
+      <div style="font-size:16px;color:#6B6B70;font-weight:600;padding:12px 0 8px;">分鐘</div>
+      <div class="time-grid" id="minuteGrid"></div>
+      <div style="display:grid;grid-template-columns:1fr 2fr;gap:10px;margin-top:14px">
+        <button class="search-btn" style="font-size:18px;padding:18px;min-height:60px;letter-spacing:0;background:#F2F2F7;color:#185FA5" onclick="clearTimeOnly()">不指定</button>
+        <button class="search-btn" style="font-size:20px;padding:18px;min-height:60px;letter-spacing:2px" onclick="confirmTime()">確 定</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="settingsModal" onclick="if(event.target===this)closeModal('settingsModal')">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="modal-title">TDX API 設定<span class="status-pill" id="apiStatus">未設定</span></span>
+      <button class="modal-close" onclick="closeModal('settingsModal')">關閉</button>
+    </div>
+    <div class="modal-body">
+      <div class="settings-form">
+        <div class="help" style="background:#FFF8E6;border:1px solid #FCE7A6;padding:12px;border-radius:10px;color:#633806;margin-bottom:12px">
+          ⚠️ <strong>未設定時會使用示範資料</strong><br>
+          設定後即可查詢真實的台鐵班次資料。
+        </div>
+        <label>Client ID</label>
+        <input type="text" id="clientIdInput" placeholder="從 TDX 平台取得" autocomplete="off">
+        <label>Client Secret</label>
+        <input type="password" id="clientSecretInput" placeholder="從 TDX 平台取得" autocomplete="off">
+        <div class="help">
+          1. 至 <a href="https://tdx.transportdata.tw" target="_blank">tdx.transportdata.tw</a> 註冊登入<br>
+          2. 「會員中心」→「資料服務」→「API 金鑰」<br>
+          3. 複製 Client ID 與 Client Secret<br>
+          4. 填入後按下方「儲存並測試」<br>
+          ※ 金鑰只儲存在本機,不會傳送到任何第三方
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px">
+          <button class="search-btn" style="font-size:17px;padding:16px;min-height:54px;letter-spacing:0;background:#F2F2F7;color:#185FA5" onclick="clearCredentials()">清除設定</button>
+          <button class="search-btn" style="font-size:17px;padding:16px;min-height:54px;letter-spacing:0" onclick="saveCredentials()">儲存並測試</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============== TDX API ==============
+const TDX_TOKEN_URL = 'https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token';
+const TDX_API_BASE = 'https://tdx.transportdata.tw/api/basic/v3/Rail/TRA';
+
+async function getTdxToken() {
+  const creds = getCredentials();
+  if (!creds) return null;
+
+  const cached = localStorage.getItem('tdx_token');
+  if (cached) {
+    try {
+      const data = JSON.parse(cached);
+      if (data.expires > Date.now() + 60000) return data.token;
+    } catch (e) {}
+  }
+
+  const body = new URLSearchParams({
+    grant_type: 'client_credentials',
+    client_id: creds.clientId,
+    client_secret: creds.clientSecret
+  });
+
+  const res = await fetch(TDX_TOKEN_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString()
+  });
+  if (!res.ok) {
+    const txt = await res.text().catch(()=>'');
+    throw new Error('Token 取得失敗 (' + res.status + ') ' + txt.slice(0,120));
+  }
+  const data = await res.json();
+  localStorage.setItem('tdx_token', JSON.stringify({
+    token: data.access_token,
+    expires: Date.now() + (data.expires_in - 120) * 1000
+  }));
+  return data.access_token;
+}
+
+async function tdxFetch(url) {
+  const token = await getTdxToken();
+  if (!token) throw new Error('NO_CREDENTIALS');
+  const res = await fetch(url, {
+    headers: { 'Authorization': 'Bearer ' + token, 'Accept-Encoding': 'gzip' }
+  });
+  if (res.status === 401) {
+    localStorage.removeItem('tdx_token');
+    return tdxFetch(url);
+  }
+  if (!res.ok) throw new Error('API 失敗 (' + res.status + ')');
+  return res.json();
+}
+
+async function fetchODTrains(fromId, toId, dateStr) {
+  const url = `${TDX_API_BASE}/DailyTrainTimetable/OD/${fromId}/to/${toId}/${dateStr}?%24format=JSON`;
+  return tdxFetch(url);
+}
+
+function getCredentials() {
+  const id = localStorage.getItem('tdx_client_id');
+  const secret = localStorage.getItem('tdx_client_secret');
+  if (!id || !secret) return null;
+  return { clientId: id, clientSecret: secret };
+}
+
+function setCredentials(id, secret) {
+  localStorage.setItem('tdx_client_id', id);
+  localStorage.setItem('tdx_client_secret', secret);
+  localStorage.removeItem('tdx_token');
+}
+
+function clearCredentials() {
+  if (!confirm('確定要清除 TDX API 金鑰?清除後將使用示範資料。')) return;
+  localStorage.removeItem('tdx_client_id');
+  localStorage.removeItem('tdx_client_secret');
+  localStorage.removeItem('tdx_token');
+  document.getElementById('clientIdInput').value = '';
+  document.getElementById('clientSecretInput').value = '';
+  updateApiStatusUI();
+  showToast('已清除設定');
+}
+
+async function saveCredentials() {
+  const id = document.getElementById('clientIdInput').value.trim();
+  const secret = document.getElementById('clientSecretInput').value.trim();
+  if (!id || !secret) { showToast('請填入完整的 Client ID 和 Secret'); return; }
+  setCredentials(id, secret);
+  showToast('測試連線中...');
+  try {
+    await getTdxToken();
+    showToast('✓ 連線成功!設定已儲存');
+    updateApiStatusUI();
+    setTimeout(() => closeModal('settingsModal'), 1000);
+  } catch (e) {
+    showToast('✗ 連線失敗:' + e.message);
+    updateApiStatusUI();
+  }
+}
+
+function updateApiStatusUI() {
+  const pill = document.getElementById('apiStatus');
+  if (getCredentials()) {
+    pill.textContent = '已設定';
+    pill.className = 'status-pill status-ok';
+  } else {
+    pill.textContent = '未設定';
+    pill.className = 'status-pill status-no';
+  }
+}
+
+function openSettings() {
+  const creds = getCredentials();
+  if (creds) {
+    document.getElementById('clientIdInput').value = creds.clientId;
+    document.getElementById('clientSecretInput').value = creds.clientSecret;
+  }
+  updateApiStatusUI();
+  document.getElementById('settingsModal').classList.add('show');
+}
+
+// ============== STATION DATA ==============
+// TRA StationID 參考台鐵列車排點系統車站代碼
+const STATION_DATA = [
+  { region: '北部', name: '基隆', id: '0900' },
+  { region: '北部', name: '七堵', id: '0930' },
+  { region: '北部', name: '南港', id: '0980' },
+  { region: '北部', name: '松山', id: '0990' },
+  { region: '北部', name: '台北', id: '1000' },
+  { region: '北部', name: '萬華', id: '1010' },
+  { region: '北部', name: '板橋', id: '1020' },
+  { region: '北部', name: '樹林', id: '1030' },
+  { region: '北部', name: '桃園', id: '1080' },
+  { region: '北部', name: '中壢', id: '1100' },
+  { region: '北部', name: '新竹', id: '1210' },
+  { region: '北部', name: '竹南', id: '1240' },
+  { region: '中部', name: '苗栗', id: '3140' },
+  { region: '中部', name: '豐原', id: '3290' },
+  { region: '中部', name: '台中', id: '3300' },
+  { region: '中部', name: '彰化', id: '3360' },
+  { region: '中部', name: '員林', id: '3390' },
+  { region: '中部', name: '田中', id: '3420' },
+  { region: '中部', name: '斗六', id: '3470' },
+  { region: '中部', name: '嘉義', id: '4080' },
+  { region: '南部', name: '新營', id: '4150' },
+  { region: '南部', name: '台南', id: '4220' },
+  { region: '南部', name: '保安', id: '4250' },
+  { region: '南部', name: '高雄', id: '4400' },
+  { region: '南部', name: '鳳山', id: '4410' },
+  { region: '南部', name: '屏東', id: '5000' },
+  { region: '南部', name: '潮州', id: '5050' },
+  { region: '東部', name: '宜蘭', id: '7190' },
+  { region: '東部', name: '羅東', id: '7210' },
+  { region: '東部', name: '蘇澳', id: '7250' },
+  { region: '東部', name: '花蓮', id: '7000' },
+  { region: '東部', name: '玉里', id: '6130' },
+  { region: '東部', name: '池上', id: '6160' },
+  { region: '東部', name: '台東', id: '6210' },
+  { region: '其他', name: '福隆', id: '7110' },
+  { region: '其他', name: '頭城', id: '7150' },
+  { region: '其他', name: '雙溪', id: '7100' },
+  { region: '其他', name: '瑞芳', id: '7060' },
+  { region: '其他', name: '南澳', id: '7290' },
+  { region: '其他', name: '和平', id: '7330' },
+  { region: '其他', name: '新城', id: '7370' },
+  { region: '其他', name: '富里', id: '6140' },
+  { region: '其他', name: '關山', id: '6170' }
+];
+
+const STATIONS_BY_REGION = STATION_DATA.reduce((acc, s) => {
+  (acc[s.region] = acc[s.region] || []).push(s);
+  return acc;
+}, {});
+
+function findStation(name) { return STATION_DATA.find(s => s.name === name); }
+
+// ============== STATE ==============
+let state = {
+  from: null, to: null, date: null,
+  hour: null, minute: null,
+  trainType: 'ALL',
+  selectingStation: null,
+  tempHour: null, tempMinute: null
+};
+
+// ============== UI HELPERS ==============
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function updateUI() {
+  const f = document.getElementById('fromBtn');
+  const tb = document.getElementById('toBtn');
+  if (state.from) { f.textContent = state.from; f.classList.remove('empty'); }
+  else { f.textContent = '請選擇'; f.classList.add('empty'); }
+  if (state.to) { tb.textContent = state.to; tb.classList.remove('empty'); }
+  else { tb.textContent = '請選擇'; tb.classList.add('empty'); }
+
+  const dateBtn = document.getElementById('dateBtn');
+  if (state.date) {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const d = new Date(state.date); d.setHours(0,0,0,0);
+    const diff = (d - today) / (1000*60*60*24);
+    const wd = ['日','一','二','三','四','五','六'][d.getDay()];
+    let dateText;
+    if (diff === 0) dateText = '今天 (' + wd + ')';
+    else if (diff === 1) dateText = '明天 (' + wd + ')';
+    else dateText = (d.getMonth()+1) + '/' + d.getDate() + ' (' + wd + ')';
+    dateBtn.textContent = dateText;
+    dateBtn.classList.remove('empty');
+    dateBtn.classList.add('has-value');
+  } else {
+    dateBtn.textContent = '今天';
+    dateBtn.classList.add('empty');
+    dateBtn.classList.remove('has-value');
+  }
+
+  const timeBtn = document.getElementById('timeBtn');
+  if (state.hour !== null && state.minute !== null) {
+    const h = String(state.hour).padStart(2,'0');
+    const m = String(state.minute).padStart(2,'0');
+    timeBtn.textContent = h + ':' + m + ' 起';
+    timeBtn.classList.remove('empty');
+    timeBtn.classList.add('has-value');
+  } else {
+    timeBtn.textContent = '不指定';
+    timeBtn.classList.add('empty');
+    timeBtn.classList.remove('has-value');
+  }
+
+  document.getElementById('clearBtn').style.display =
+    (state.date || state.hour !== null) ? 'inline-block' : 'none';
+}
+
+function clearDateTime() {
+  state.date = null; state.hour = null; state.minute = null;
+  updateUI();
+  showToast('已清除,將列出今日全部班次');
+}
+
+function openStation(which) {
+  state.selectingStation = which;
+  document.getElementById('stationModalTitle').textContent = which === 'from' ? '選擇起站' : '選擇訖站';
+  document.getElementById('stationSearch').value = '';
+  renderStations('');
+  document.getElementById('stationModal').classList.add('show');
+}
+
+function renderStations(filter) {
+  const list = document.getElementById('stationList');
+  list.innerHTML = '';
+  const current = state.selectingStation === 'from' ? state.from : state.to;
+  for (const [region, stations] of Object.entries(STATIONS_BY_REGION)) {
+    const filtered = stations.filter(s => !filter || s.name.includes(filter));
+    if (filtered.length === 0) continue;
+    const group = document.createElement('div');
+    group.className = 'station-group';
+    group.innerHTML = '<div class="group-title">' + region + '</div>';
+    const grid = document.createElement('div');
+    grid.className = 'station-list';
+    filtered.forEach(s => {
+      const btn = document.createElement('button');
+      btn.className = 'station-item' + (s.name === current ? ' selected' : '');
+      btn.textContent = s.name;
+      btn.onclick = () => selectStation(s.name);
+      grid.appendChild(btn);
+    });
+    group.appendChild(grid);
+    list.appendChild(group);
+  }
+}
+
+function filterStations() {
+  renderStations(document.getElementById('stationSearch').value.trim());
+}
+
+function selectStation(s) {
+  if (state.selectingStation === 'from') {
+    if (s === state.to) { showToast('起訖站不能相同'); return; }
+    state.from = s;
+  } else {
+    if (s === state.from) { showToast('起訖站不能相同'); return; }
+    state.to = s;
+  }
+  closeModal('stationModal');
+  updateUI();
+}
+
+function swapStations() {
+  if (!state.from || !state.to) { showToast('請先選擇起訖站'); return; }
+  [state.from, state.to] = [state.to, state.from];
+  updateUI();
+}
+
+function openDate() {
+  const list = document.getElementById('dateList');
+  list.innerHTML = '';
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  const todayBtn = document.createElement('button');
+  todayBtn.className = 'station-item';
+  todayBtn.style.cssText = 'font-size:20px;padding:20px 12px;min-height:64px;width:100%;margin-bottom:8px;display:block;background:#E6F1FB;border-color:#185FA5;color:#0C447C;font-weight:700';
+  todayBtn.textContent = '今天 (預設)';
+  todayBtn.onclick = () => { state.date = null; closeModal('dateModal'); updateUI(); };
+  list.appendChild(todayBtn);
+
+  const sep = document.createElement('div');
+  sep.style.cssText = 'height:1px;background:#E5E5EA;margin:8px 0';
+  list.appendChild(sep);
+
+  for (let i = 0; i < 14; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() + i);
+    const wd = ['日','一','二','三','四','五','六'][d.getDay()];
+    const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+    const btn = document.createElement('button');
+    btn.className = 'station-item';
+    btn.style.cssText = 'font-size:20px;padding:20px 12px;min-height:64px;width:100%;margin-bottom:8px;display:block';
+    if (isWeekend) btn.style.color = '#A32D2D';
+    let label;
+    if (i === 0) label = '今天 ' + (d.getMonth()+1) + '/' + d.getDate() + ' (' + wd + ')';
+    else if (i === 1) label = '明天 ' + (d.getMonth()+1) + '/' + d.getDate() + ' (' + wd + ')';
+    else label = (d.getMonth()+1) + '/' + d.getDate() + ' (星期' + wd + ')';
+    btn.textContent = label;
+    if (state.date && state.date.getDate() === d.getDate() && state.date.getMonth() === d.getMonth()) {
+      btn.classList.add('selected');
+    }
+    btn.onclick = () => { state.date = d; closeModal('dateModal'); updateUI(); };
+    list.appendChild(btn);
+  }
+  document.getElementById('dateModal').classList.add('show');
+}
+
+function openTime() {
+  state.tempHour = state.hour !== null ? state.hour : new Date().getHours();
+  state.tempMinute = state.minute !== null ? state.minute : 0;
+  renderTimeGrid();
+  document.getElementById('timeModal').classList.add('show');
+}
+
+function renderTimeGrid() {
+  const hg = document.getElementById('hourGrid');
+  hg.innerHTML = '';
+  for (let h = 0; h < 24; h++) {
+    const c = document.createElement('button');
+    c.className = 'time-cell' + (h === state.tempHour ? ' selected' : '');
+    c.textContent = String(h).padStart(2,'0');
+    c.onclick = () => { state.tempHour = h; renderTimeGrid(); };
+    hg.appendChild(c);
+  }
+  const mg = document.getElementById('minuteGrid');
+  mg.innerHTML = '';
+  [0,5,10,15,20,25,30,35,40,45,50,55].forEach(m => {
+    const c = document.createElement('button');
+    c.className = 'time-cell' + (m === state.tempMinute ? ' selected' : '');
+    c.textContent = String(m).padStart(2,'0');
+    c.onclick = () => { state.tempMinute = m; renderTimeGrid(); };
+    mg.appendChild(c);
+  });
+}
+
+function confirmTime() {
+  state.hour = state.tempHour; state.minute = state.tempMinute;
+  closeModal('timeModal'); updateUI();
+}
+
+function clearTimeOnly() {
+  state.hour = null; state.minute = null;
+  closeModal('timeModal'); updateUI();
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+document.getElementById('trainTypes').addEventListener('click', (e) => {
+  if (e.target.classList.contains('chip')) {
+    document.querySelectorAll('#trainTypes .chip').forEach(c => c.classList.remove('active'));
+    e.target.classList.add('active');
+    state.trainType = e.target.dataset.type;
+  }
+});
+
+// ============== TRAIN TYPE MAP ==============
+// TDX API TrainTypeID 對應
+function getTrainTypeInfo(typeId, typeName) {
+  if (typeId === '11' || typeName?.includes('區間快')) return { name: '區間快', class: 'type-loc-fast' };
+  if (typeId === '6' || typeName?.includes('區間')) return { name: '區間', class: 'type-loc' };
+  if (typeId === '2' || typeName?.includes('莒光')) return { name: '莒光', class: 'type-cm' };
+  if (typeId === '3' || typeName?.includes('3000')) return { name: '自強 3000', class: 'type-313' };
+  if (typeId === '1' || typeName?.includes('自強')) return { name: '自強', class: 'type-eq' };
+  return { name: typeName || '其他', class: 'type-loc' };
+}
+
+function fmtDate(d) {
+  const yr = d.getFullYear();
+  const mo = String(d.getMonth()+1).padStart(2,'0');
+  const dy = String(d.getDate()).padStart(2,'0');
+  return yr + '-' + mo + '-' + dy;
+}
+
+function timeStrToMin(t) {
+  if (!t) return 0;
+  const parts = t.split(':');
+  return parseInt(parts[0])*60 + parseInt(parts[1]);
+}
+
+function fmtDur(min) {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  if (h === 0) return m + ' 分';
+  if (m === 0) return h + ' 小時';
+  return h + ' 小時 ' + m + ' 分';
+}
+
+// ============== DEMO DATA (fallback) ==============
+const DEMO_TYPES = [
+  { id: '3', name: '自強 3000', class: 'type-313', speed: 1.0, prefix: 1 },
+  { id: '1', name: '自強', class: 'type-eq', speed: 1.0, prefix: 1 },
+  { id: '2', name: '莒光', class: 'type-cm', speed: 0.85, prefix: 5 },
+  { id: '11', name: '區間快', class: 'type-loc-fast', speed: 0.75, prefix: 4 },
+  { id: '6', name: '區間', class: 'type-loc', speed: 0.55, prefix: 3 }
+];
+
+const BASE_DURATIONS = {
+  '基隆-台北': 50, '台北-板橋': 10, '台北-桃園': 30, '台北-新竹': 70, '台北-台中': 110,
+  '台北-台南': 220, '台北-高雄': 240, '台北-花蓮': 130, '台北-台東': 230,
+  '高雄-台南': 30, '高雄-嘉義': 80, '高雄-台中': 150, '高雄-花蓮': 380, '高雄-台東': 220,
+  '台中-台南': 120, '台中-嘉義': 60, '花蓮-台東': 150
+};
+
+function getBaseDuration(a, b) {
+  const k1 = a + '-' + b, k2 = b + '-' + a;
+  if (BASE_DURATIONS[k1]) return BASE_DURATIONS[k1];
+  if (BASE_DURATIONS[k2]) return BASE_DURATIONS[k2];
+  return 60;
+}
+
+function generateDemoTrains() {
+  const list = [];
+  const base = getBaseDuration(state.from, state.to);
+  const types = state.trainType === 'ALL' ? DEMO_TYPES : DEMO_TYPES.filter(t => t.id === state.trainType);
+  if (types.length === 0) return [];
+  let seedNo = 100;
+  const seed = (state.from + state.to).split('').reduce((a,c) => a + c.charCodeAt(0), 0);
+  let r = seed;
+  const rand = () => { r = (r * 9301 + 49297) % 233280; return r / 233280; };
+
+  for (let depMin = 5*60; depMin < 23*60 + 30; depMin += 12 + Math.floor(rand() * 18)) {
+    const t = types[Math.floor(rand() * types.length)];
+    if (!t) continue;
+    const dur = Math.round(base / t.speed + (rand() * 10 - 5));
+    const arrMin = depMin + dur;
+    if (arrMin >= 24*60) continue;
+    const trainNo = String(t.prefix * 100 + seedNo + Math.floor(rand() * 30));
+    list.push({
+      no: trainNo, typeName: t.name, typeClass: t.class,
+      depMin, arrMin, duration: fmtDur(dur)
+    });
+    seedNo += 2;
+  }
+  return list.sort((a,b) => a.depMin - b.depMin);
+}
+
+// ============== SEARCH ==============
+async function search() {
+  if (!state.from || !state.to) { showToast('請選擇起訖站'); return; }
+  const fromS = findStation(state.from);
+  const toS = findStation(state.to);
+  if (!fromS || !toS) { showToast('車站資料錯誤'); return; }
+
+  const queryDate = state.date || new Date();
+
+  document.getElementById('searchPage').style.display = 'none';
+  document.getElementById('resultPage').style.display = 'block';
+  document.getElementById('backBtn').style.display = 'block';
+  document.getElementById('headerTitle').textContent = '查詢結果';
+  document.getElementById('settingsBtn').style.display = 'none';
+  window.scrollTo(0, 0);
+
+  document.getElementById('resultContent').innerHTML =
+    '<div class="loading"><div class="spinner"></div><div>查詢中...</div></div>';
+
+  let trains = [];
+  let isLive = false;
+  let errorMsg = null;
+
+  if (getCredentials()) {
+    try {
+      const data = await fetchODTrains(fromS.id, toS.id, fmtDate(queryDate));
+      trains = parseODResponse(data);
+      isLive = true;
+    } catch (e) {
+      console.error(e);
+      errorMsg = e.message;
+      trains = generateDemoTrains();
+    }
+  } else {
+    trains = generateDemoTrains();
+  }
+
+  // Train type filter
+  if (state.trainType !== 'ALL') {
+    trains = trains.filter(t => {
+      if (state.trainType === '11') return t.typeName?.includes('區間快');
+      if (state.trainType === '6') return t.typeName === '區間' || (t.typeName?.includes('區間') && !t.typeName?.includes('區間快'));
+      if (state.trainType === '2') return t.typeName?.includes('莒光');
+      if (state.trainType === '3') return t.typeName?.includes('3000');
+      if (state.trainType === '1') return t.typeName === '自強' || (t.typeName?.includes('自強') && !t.typeName?.includes('3000'));
+      return true;
+    });
+  }
+
+  // Time filter
+  let filterStartMin = null;
+  if (state.hour !== null && state.minute !== null) {
+    filterStartMin = state.hour * 60 + state.minute;
+    trains = trains.filter(t => t.depMin >= filterStartMin);
+  }
+
+  renderResult(trains, queryDate, filterStartMin, isLive, errorMsg);
+}
+
+function parseODResponse(data) {
+  // TDX OD response: data.TrainTimetables[].{TrainInfo, OriginStopTime, DestinationStopTime}
+  const rows = data?.TrainTimetables || [];
+  return rows.map(item => {
+    const info = item.TrainInfo || {};
+    const orig = item.OriginStopTime || {};
+    const dest = item.DestinationStopTime || {};
+    const typeId = String(info.TrainTypeID || '');
+    const typeName = info.TrainTypeName?.Zh_tw || info.TrainTypeName || '';
+    const ti = getTrainTypeInfo(typeId, typeName);
+    const depMin = timeStrToMin(orig.DepartureTime);
+    const arrMin = timeStrToMin(dest.ArrivalTime);
+    let dur = arrMin - depMin;
+    if (dur < 0) dur += 24*60;
+    return {
+      no: String(info.TrainNo || ''),
+      typeName: ti.name, typeClass: ti.class,
+      depTime: orig.DepartureTime,
+      arrTime: dest.ArrivalTime,
+      depMin, arrMin,
+      duration: fmtDur(dur)
+    };
+  }).sort((a,b) => a.depMin - b.depMin);
+}
+
+function renderResult(trains, queryDate, filterStartMin, isLive, errorMsg) {
+  const container = document.getElementById('resultContent');
+  const wd = ['日','一','二','三','四','五','六'][queryDate.getDay()];
+  let metaText = (queryDate.getMonth()+1) + '/' + queryDate.getDate() + ' (星期' + wd + ')';
+  metaText += filterStartMin !== null
+    ? '  ' + String(state.hour).padStart(2,'0') + ':' + String(state.minute).padStart(2,'0') + ' 起'
+    : '  全日班次';
+  metaText += '  共 ' + trains.length + ' 班';
+
+  let sourceLine;
+  if (isLive) sourceLine = '<div class="data-source live">✓ 即時資料 (TDX 台鐵 API)</div>';
+  else if (errorMsg) sourceLine = '<div class="data-source demo">⚠ API 失敗,使用示範資料 — ' + errorMsg + '</div>';
+  else sourceLine = '<div class="data-source demo">⚠ 示範資料 (尚未設定 API,點右上 ⚙ 設定)</div>';
+
+  let html = '<div class="result-summary">' +
+    '<div class="route">' + state.from + ' → ' + state.to + '</div>' +
+    '<div class="meta">' + metaText + '</div>' +
+    sourceLine + '</div>';
+
+  const isToday = (() => {
+    const t = new Date(); t.setHours(0,0,0,0);
+    const d = new Date(queryDate); d.setHours(0,0,0,0);
+    return t.getTime() === d.getTime();
+  })();
+
+  if (trains.length === 0) {
+    html += '<div class="empty-state"><div class="icon">🚆</div><div class="title">查無班次</div><div class="sub">請調整時間或車種重新查詢</div></div>';
+  } else {
+    const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+    let nowDividerInserted = false;
+    html += trains.map(t => {
+      let prefix = '';
+      const isPast = isToday && filterStartMin === null && t.depMin < nowMin;
+      if (isToday && filterStartMin === null && !nowDividerInserted && t.depMin >= nowMin) {
+        prefix = '<div class="divider-now">現在 ' + String(Math.floor(nowMin/60)).padStart(2,'0') + ':' + String(nowMin%60).padStart(2,'0') + '</div>';
+        nowDividerInserted = true;
+      }
+      const dep = t.depTime || (String(Math.floor(t.depMin/60)).padStart(2,'0') + ':' + String(t.depMin%60).padStart(2,'0'));
+      const arr = t.arrTime || (String(Math.floor(t.arrMin/60)).padStart(2,'0') + ':' + String(t.arrMin%60).padStart(2,'0'));
+      return prefix + `
+        <div class="result-card${isPast ? ' past' : ''}">
+          <div class="result-head">
+            <span class="train-no">${t.no} 次</span>
+            <span class="train-type ${t.typeClass}">${t.typeName}</span>
+          </div>
+          <div class="times">
+            <div class="time-block">
+              <div class="time-big">${dep}</div>
+              <div class="time-station">${state.from}</div>
+            </div>
+            <span class="arrow">→</span>
+            <div class="time-block">
+              <div class="time-big">${arr}</div>
+              <div class="time-station">${state.to}</div>
+            </div>
+          </div>
+          <div class="duration">行車時間 ${t.duration}</div>
+        </div>
+      `;
+    }).join('');
+  }
+  container.innerHTML = html;
+}
+
+function goBack() {
+  document.getElementById('searchPage').style.display = 'block';
+  document.getElementById('resultPage').style.display = 'none';
+  document.getElementById('backBtn').style.display = 'none';
+  document.getElementById('headerTitle').textContent = '台鐵時刻查詢';
+  document.getElementById('settingsBtn').style.display = 'inline-block';
+  window.scrollTo(0, 0);
+}
+
+// ============== INIT ==============
+updateApiStatusUI();
+updateUI();
+
+// First-run hint
+if (!getCredentials() && !localStorage.getItem('first_run_hint')) {
+  setTimeout(() => {
+    showToast('💡 點右上 ⚙ 設定 TDX API 金鑰可查詢真實資料');
+    localStorage.setItem('first_run_hint', '1');
+  }, 800);
+}
+
+// Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+</script>
+
+</body>
+</html>
