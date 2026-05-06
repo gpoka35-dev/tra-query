@@ -1,5 +1,5 @@
 // Service Worker for 台鐵時刻查詢 PWA
-const CACHE_NAME = 'tra-query-v3';
+const CACHE_NAME = 'tra-query-v4';
 const ASSETS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (e) => {

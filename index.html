@@ -532,110 +532,191 @@ function openSettings() {
 // ============== STATION DATA ==============
 // 完整台鐵車站 fallback 名單(StationID 來自 TDX TRA 列車排點系統車站代碼)
 // 第一次連 TDX 成功後會用 API 真實資料覆蓋此名單
+// 格式:[車站名, ID, 大區, 縣市]
 const STATION_FALLBACK = [
-  // 縱貫線北段 0900~1240
-  ['基隆','0900','北部'],['三坑','0910','北部'],['八堵','0920','北部'],['七堵','0930','北部'],
-  ['百福','0940','北部'],['五堵','0950','北部'],['汐止','0960','北部'],['汐科','0970','北部'],
-  ['南港','0980','北部'],['松山','0990','北部'],['台北','1000','北部'],['萬華','1010','北部'],
-  ['板橋','1020','北部'],['浮洲','1030','北部'],['樹林','1040','北部'],['南樹林','1050','北部'],
-  ['山佳','1060','北部'],['鶯歌','1070','北部'],['桃園','1080','北部'],['內壢','1090','北部'],
-  ['中壢','1100','北部'],['埔心','1110','北部'],['楊梅','1120','北部'],['富岡','1130','北部'],
-  ['新富','1140','北部'],['北湖','1150','北部'],['湖口','1160','北部'],['新豐','1170','北部'],
-  ['竹北','1180','北部'],['北新竹','1190','北部'],['新竹','1210','北部'],['三姓橋','1220','北部'],
-  ['香山','1230','北部'],['崎頂','1240','北部'],
-  // 內灣線/六家線
-  ['千甲','1191','內灣支線'],['新莊','1192','內灣支線'],['竹中','1193','內灣支線'],
-  ['六家','1194','內灣支線'],['上員','1195','內灣支線'],['榮華','1196','內灣支線'],
-  ['竹東','1197','內灣支線'],['橫山','1198','內灣支線'],['九讚頭','1199','內灣支線'],
-  ['合興','1201','內灣支線'],['富貴','1202','內灣支線'],['內灣','1203','內灣支線'],
-  // 山線
-  ['竹南','3140','中部'],['造橋','3150','中部'],['豐富','3160','中部'],['苗栗','3170','中部'],
-  ['南勢','3180','中部'],['銅鑼','3190','中部'],['三義','3210','中部'],['泰安','3220','中部'],
-  ['后里','3230','中部'],['豐原','3240','中部'],['栗林','3250','中部'],['潭子','3260','中部'],
-  ['頭家厝','3270','中部'],['松竹','3280','中部'],['太原','3290','中部'],['精武','3300','中部'],
-  ['台中','3310','中部'],['五權','3320','中部'],['大慶','3330','中部'],['烏日','3340','中部'],
-  ['新烏日','3350','中部'],['成功','3360','中部'],['彰化','3370','中部'],
-  // 海線
-  ['談文','4070','海線'],['大山','4080','海線'],['後龍','4090','海線'],['龍港','4100','海線'],
-  ['白沙屯','4110','海線'],['新埔','4120','海線'],['通霄','4130','海線'],['苑裡','4140','海線'],
-  ['日南','4150','海線'],['大甲','4160','海線'],['台中港','4170','海線'],['清水','4180','海線'],
-  ['沙鹿','4190','海線'],['龍井','4200','海線'],['大肚','4210','海線'],['追分','4220','海線'],
-  // 縱貫線中段 (彰化-嘉義)
-  ['花壇','3380','中部'],['大村','3390','中部'],['員林','3400','中部'],['永靖','3410','中部'],
-  ['社頭','3420','中部'],['田中','3430','中部'],['二水','3440','中部'],['林內','3450','中部'],
-  ['石榴','3460','中部'],['斗六','3470','中部'],['斗南','4050','中部'],['石龜','4060','中部'],
-  ['大林','4070','中部'],['民雄','4080','中部'],['嘉北','4090','中部'],['嘉義','4100','中部'],
-  // 集集線
-  ['源泉','2901','集集支線'],['濁水','2902','集集支線'],['龍泉','2903','集集支線'],
-  ['集集','2904','集集支線'],['水里','2905','集集支線'],['車埕','2906','集集支線'],
-  // 縱貫線南段
-  ['水上','4110','南部'],['南靖','4120','南部'],['後壁','4130','南部'],['新營','4140','南部'],
-  ['柳營','4150','南部'],['林鳳營','4160','南部'],['隆田','4170','南部'],['拔林','4180','南部'],
-  ['善化','4190','南部'],['南科','4200','南部'],['新市','4210','南部'],['永康','4220','南部'],
-  ['大橋','4250','南部'],['台南','4260','南部'],['保安','4270','南部'],['仁德','4280','南部'],
-  ['中洲','4290','南部'],['大湖','4300','南部'],['路竹','4310','南部'],['岡山','4320','南部'],
-  ['橋頭','4330','南部'],['楠梓','4340','南部'],['新左營','4350','南部'],['左營','4360','南部'],
-  ['內惟','4370','南部'],['美術館','4380','南部'],['鼓山','4390','南部'],['三塊厝','4400','南部'],
-  ['高雄','4410','南部'],['民族','4420','南部'],['科工館','4430','南部'],['正義','4440','南部'],
-  ['鳳山','4450','南部'],['後庄','4460','南部'],['九曲堂','4470','南部'],['六塊厝','4480','南部'],
-  ['屏東','4490','南部'],['歸來','5000','南部'],['麟洛','5010','南部'],['西勢','5020','南部'],
-  ['竹田','5030','南部'],['潮州','5040','南部'],['崁頂','5050','南部'],['南州','5060','南部'],
-  ['鎮安','5070','南部'],['林邊','5080','南部'],['佳冬','5090','南部'],['東海','5100','南部'],
-  ['枋寮','5110','南部'],
-  // 南迴線
-  ['加祿','5120','南迴線'],['內獅','5130','南迴線'],['枋山','5140','南迴線'],
-  ['古莊','5150','南迴線'],['大武','5170','南迴線'],['瀧溪','5180','南迴線'],
-  ['金崙','5190','南迴線'],['太麻里','5200','南迴線'],['知本','5210','南迴線'],
-  ['康樂','5220','南迴線'],
-  // 花東線
-  ['台東','6210','東部'],['山里','6190','東部'],['鹿野','6180','東部'],['瑞源','6170','東部'],
-  ['瑞和','6160','東部'],['關山','6150','東部'],['海端','6140','東部'],['池上','6130','東部'],
-  ['富里','6120','東部'],['東竹','6110','東部'],['東里','6100','東部'],['玉里','6080','東部'],
-  ['三民','6070','東部'],['瑞穗','6060','東部'],['富源','6050','東部'],['大富','6040','東部'],
-  ['光復','6030','東部'],['萬榮','6020','東部'],['鳳林','6010','東部'],['南平','6000','東部'],
-  ['林榮新光','5990','東部'],['豐田','5980','東部'],['壽豐','5970','東部'],['平和','5960','東部'],
-  ['志學','5950','東部'],['吉安','5940','東部'],['花蓮','7000','東部'],
-  // 北迴線
-  ['北埔','7010','東部'],['景美','7020','東部'],['新城','7030','東部'],['崇德','7040','東部'],
-  ['和仁','7050','東部'],['和平','7060','東部'],['漢本','7070','東部'],['武塔','7080','東部'],
-  ['南澳','7090','東部'],['東澳','7100','東部'],['永樂','7110','東部'],['蘇澳','7120','東部'],
-  ['蘇澳新','7130','東部'],
-  // 宜蘭線
-  ['新馬','7140','東部'],['冬山','7150','東部'],['羅東','7160','東部'],['中里','7170','東部'],
-  ['二結','7180','東部'],['宜蘭','7190','東部'],['四城','7200','東部'],['礁溪','7210','東部'],
-  ['頂埔','7220','東部'],['頭城','7230','東部'],['外澳','7240','東部'],['龜山','7250','東部'],
-  ['大溪','7260','東部'],['大里','7270','東部'],['石城','7280','東部'],['福隆','7290','東部'],
-  ['貢寮','7300','東部'],['雙溪','7310','東部'],['牡丹','7320','東部'],['三貂嶺','7330','東部'],
-  // 平溪線
-  ['大華','7331','平溪支線'],['十分','7332','平溪支線'],['望古','7333','平溪支線'],
-  ['嶺腳','7334','平溪支線'],['平溪','7335','平溪支線'],['菁桐','7336','平溪支線'],
-  // 縱貫線北段(瑞芳支)
-  ['猴硐','7340','北部'],['瑞芳','7350','北部'],['四腳亭','7360','北部'],['暖暖','7370','北部'],
-  // 深澳線
-  ['海科館','7341','深澳支線'],['八斗子','7342','深澳支線']
+  // ===== 北部 =====
+  // 基隆市
+  ['基隆','0900','北部','基隆市'],['三坑','0910','北部','基隆市'],['八堵','0920','北部','基隆市'],
+  ['七堵','0930','北部','基隆市'],['百福','0940','北部','基隆市'],
+  ['海科館','7341','北部','基隆市'],['八斗子','7342','北部','基隆市'],
+  // 新北市
+  ['五堵','0950','北部','新北市'],['汐止','0960','北部','新北市'],['汐科','0970','北部','新北市'],
+  ['浮洲','1030','北部','新北市'],['樹林','1040','北部','新北市'],['南樹林','1050','北部','新北市'],
+  ['山佳','1060','北部','新北市'],['鶯歌','1070','北部','新北市'],
+  ['猴硐','7340','北部','新北市'],['瑞芳','7350','北部','新北市'],
+  ['四腳亭','7360','北部','新北市'],['暖暖','7370','北部','新北市'],
+  ['福隆','7290','北部','新北市'],['貢寮','7300','北部','新北市'],
+  ['雙溪','7310','北部','新北市'],['牡丹','7320','北部','新北市'],
+  ['三貂嶺','7330','北部','新北市'],
+  ['大華','7331','北部','新北市'],['十分','7332','北部','新北市'],['望古','7333','北部','新北市'],
+  ['嶺腳','7334','北部','新北市'],['平溪','7335','北部','新北市'],['菁桐','7336','北部','新北市'],
+  ['板橋','1020','北部','新北市'],
+  // 台北市
+  ['南港','0980','北部','台北市'],['松山','0990','北部','台北市'],
+  ['台北','1000','北部','台北市'],['萬華','1010','北部','台北市'],
+  // 桃園市
+  ['桃園','1080','北部','桃園市'],['內壢','1090','北部','桃園市'],
+  ['中壢','1100','北部','桃園市'],['埔心','1110','北部','桃園市'],
+  ['楊梅','1120','北部','桃園市'],['富岡','1130','北部','桃園市'],
+  ['新富','1140','北部','桃園市'],
+  // 新竹縣
+  ['北湖','1150','北部','新竹縣'],['湖口','1160','北部','新竹縣'],
+  ['新豐','1170','北部','新竹縣'],['竹北','1180','北部','新竹縣'],
+  ['新莊','1192','北部','新竹縣'],['竹中','1193','北部','新竹縣'],
+  ['六家','1194','北部','新竹縣'],['上員','1195','北部','新竹縣'],
+  ['榮華','1196','北部','新竹縣'],['竹東','1197','北部','新竹縣'],
+  ['橫山','1198','北部','新竹縣'],['九讚頭','1199','北部','新竹縣'],
+  ['合興','1201','北部','新竹縣'],['富貴','1202','北部','新竹縣'],
+  ['內灣','1203','北部','新竹縣'],
+  // 新竹市
+  ['北新竹','1190','北部','新竹市'],['千甲','1191','北部','新竹市'],
+  ['新竹','1210','北部','新竹市'],['三姓橋','1220','北部','新竹市'],
+  ['香山','1230','北部','新竹市'],
+
+  // ===== 中部 =====
+  // 苗栗縣
+  ['崎頂','1240','中部','苗栗縣'],
+  ['竹南','3140','中部','苗栗縣'],['造橋','3150','中部','苗栗縣'],
+  ['豐富','3160','中部','苗栗縣'],['苗栗','3170','中部','苗栗縣'],
+  ['南勢','3180','中部','苗栗縣'],['銅鑼','3190','中部','苗栗縣'],
+  ['三義','3210','中部','苗栗縣'],['泰安','3220','中部','苗栗縣'],
+  ['談文','4070','中部','苗栗縣'],['大山','4080','中部','苗栗縣'],
+  ['後龍','4090','中部','苗栗縣'],['龍港','4100','中部','苗栗縣'],
+  ['白沙屯','4110','中部','苗栗縣'],['新埔','4120','中部','苗栗縣'],
+  ['通霄','4130','中部','苗栗縣'],['苑裡','4140','中部','苗栗縣'],
+  // 台中市
+  ['后里','3230','中部','台中市'],['豐原','3240','中部','台中市'],
+  ['栗林','3250','中部','台中市'],['潭子','3260','中部','台中市'],
+  ['頭家厝','3270','中部','台中市'],['松竹','3280','中部','台中市'],
+  ['太原','3290','中部','台中市'],['精武','3300','中部','台中市'],
+  ['台中','3310','中部','台中市'],['五權','3320','中部','台中市'],
+  ['大慶','3330','中部','台中市'],['烏日','3340','中部','台中市'],
+  ['新烏日','3350','中部','台中市'],['成功','3360','中部','台中市'],
+  ['日南','4150','中部','台中市'],['大甲','4160','中部','台中市'],
+  ['台中港','4170','中部','台中市'],['清水','4180','中部','台中市'],
+  ['沙鹿','4190','中部','台中市'],['龍井','4200','中部','台中市'],
+  ['大肚','4210','中部','台中市'],['追分','4220','中部','台中市'],
+  // 彰化縣
+  ['彰化','3370','中部','彰化縣'],['花壇','3380','中部','彰化縣'],
+  ['大村','3390','中部','彰化縣'],['員林','3400','中部','彰化縣'],
+  ['永靖','3410','中部','彰化縣'],['社頭','3420','中部','彰化縣'],
+  ['田中','3430','中部','彰化縣'],['二水','3440','中部','彰化縣'],
+  // 南投縣 (集集線)
+  ['源泉','2901','中部','南投縣'],['濁水','2902','中部','南投縣'],
+  ['龍泉','2903','中部','南投縣'],['集集','2904','中部','南投縣'],
+  ['水里','2905','中部','南投縣'],['車埕','2906','中部','南投縣'],
+  // 雲林縣
+  ['林內','3450','中部','雲林縣'],['石榴','3460','中部','雲林縣'],
+  ['斗六','3470','中部','雲林縣'],['斗南','4050','中部','雲林縣'],
+  ['石龜','4060','中部','雲林縣'],
+
+  // ===== 南部 =====
+  // 嘉義縣
+  ['大林','4070','南部','嘉義縣'],['民雄','4080','南部','嘉義縣'],
+  // 嘉義市
+  ['嘉北','4090','南部','嘉義市'],['嘉義','4100','南部','嘉義市'],
+  // 台南市
+  ['水上','4110','南部','台南市'],['南靖','4120','南部','台南市'],
+  ['後壁','4130','南部','台南市'],['新營','4140','南部','台南市'],
+  ['柳營','4150','南部','台南市'],['林鳳營','4160','南部','台南市'],
+  ['隆田','4170','南部','台南市'],['拔林','4180','南部','台南市'],
+  ['善化','4190','南部','台南市'],['南科','4200','南部','台南市'],
+  ['新市','4210','南部','台南市'],['永康','4220','南部','台南市'],
+  ['大橋','4250','南部','台南市'],['台南','4260','南部','台南市'],
+  ['保安','4270','南部','台南市'],['仁德','4280','南部','台南市'],
+  ['中洲','4290','南部','台南市'],['大湖','4300','南部','台南市'],
+  // 高雄市
+  ['路竹','4310','南部','高雄市'],['岡山','4320','南部','高雄市'],
+  ['橋頭','4330','南部','高雄市'],['楠梓','4340','南部','高雄市'],
+  ['新左營','4350','南部','高雄市'],['左營','4360','南部','高雄市'],
+  ['內惟','4370','南部','高雄市'],['美術館','4380','南部','高雄市'],
+  ['鼓山','4390','南部','高雄市'],['三塊厝','4400','南部','高雄市'],
+  ['高雄','4410','南部','高雄市'],['民族','4420','南部','高雄市'],
+  ['科工館','4430','南部','高雄市'],['正義','4440','南部','高雄市'],
+  ['鳳山','4450','南部','高雄市'],['後庄','4460','南部','高雄市'],
+  ['九曲堂','4470','南部','高雄市'],
+  // 屏東縣
+  ['六塊厝','4480','南部','屏東縣'],['屏東','4490','南部','屏東縣'],
+  ['歸來','5000','南部','屏東縣'],['麟洛','5010','南部','屏東縣'],
+  ['西勢','5020','南部','屏東縣'],['竹田','5030','南部','屏東縣'],
+  ['潮州','5040','南部','屏東縣'],['崁頂','5050','南部','屏東縣'],
+  ['南州','5060','南部','屏東縣'],['鎮安','5070','南部','屏東縣'],
+  ['林邊','5080','南部','屏東縣'],['佳冬','5090','南部','屏東縣'],
+  ['東海','5100','南部','屏東縣'],['枋寮','5110','南部','屏東縣'],
+  ['加祿','5120','南部','屏東縣'],['內獅','5130','南部','屏東縣'],
+  ['枋山','5140','南部','屏東縣'],
+
+  // ===== 東部 =====
+  // 台東縣
+  ['古莊','5150','東部','台東縣'],['大武','5170','東部','台東縣'],
+  ['瀧溪','5180','東部','台東縣'],['金崙','5190','東部','台東縣'],
+  ['太麻里','5200','東部','台東縣'],['知本','5210','東部','台東縣'],
+  ['康樂','5220','東部','台東縣'],['台東','6210','東部','台東縣'],
+  ['山里','6190','東部','台東縣'],['鹿野','6180','東部','台東縣'],
+  ['瑞源','6170','東部','台東縣'],['瑞和','6160','東部','台東縣'],
+  ['關山','6150','東部','台東縣'],['海端','6140','東部','台東縣'],
+  ['池上','6130','東部','台東縣'],
+  // 花蓮縣
+  ['富里','6120','東部','花蓮縣'],['東竹','6110','東部','花蓮縣'],
+  ['東里','6100','東部','花蓮縣'],['玉里','6080','東部','花蓮縣'],
+  ['三民','6070','東部','花蓮縣'],['瑞穗','6060','東部','花蓮縣'],
+  ['富源','6050','東部','花蓮縣'],['大富','6040','東部','花蓮縣'],
+  ['光復','6030','東部','花蓮縣'],['萬榮','6020','東部','花蓮縣'],
+  ['鳳林','6010','東部','花蓮縣'],['南平','6000','東部','花蓮縣'],
+  ['林榮新光','5990','東部','花蓮縣'],['豐田','5980','東部','花蓮縣'],
+  ['壽豐','5970','東部','花蓮縣'],['平和','5960','東部','花蓮縣'],
+  ['志學','5950','東部','花蓮縣'],['吉安','5940','東部','花蓮縣'],
+  ['花蓮','7000','東部','花蓮縣'],['北埔','7010','東部','花蓮縣'],
+  ['景美','7020','東部','花蓮縣'],['新城','7030','東部','花蓮縣'],
+  ['崇德','7040','東部','花蓮縣'],['和仁','7050','東部','花蓮縣'],
+  ['和平','7060','東部','花蓮縣'],
+  // 宜蘭縣
+  ['漢本','7070','東部','宜蘭縣'],['武塔','7080','東部','宜蘭縣'],
+  ['南澳','7090','東部','宜蘭縣'],['東澳','7100','東部','宜蘭縣'],
+  ['永樂','7110','東部','宜蘭縣'],['蘇澳','7120','東部','宜蘭縣'],
+  ['蘇澳新','7130','東部','宜蘭縣'],['新馬','7140','東部','宜蘭縣'],
+  ['冬山','7150','東部','宜蘭縣'],['羅東','7160','東部','宜蘭縣'],
+  ['中里','7170','東部','宜蘭縣'],['二結','7180','東部','宜蘭縣'],
+  ['宜蘭','7190','東部','宜蘭縣'],['四城','7200','東部','宜蘭縣'],
+  ['礁溪','7210','東部','宜蘭縣'],['頂埔','7220','東部','宜蘭縣'],
+  ['頭城','7230','東部','宜蘭縣'],['外澳','7240','東部','宜蘭縣'],
+  ['龜山','7250','東部','宜蘭縣'],['大溪','7260','東部','宜蘭縣'],
+  ['大里','7270','東部','宜蘭縣'],['石城','7280','東部','宜蘭縣']
 ];
 
-let STATION_DATA = STATION_FALLBACK.map(([name, id, region]) => ({ name, id, region }));
+let STATION_DATA = STATION_FALLBACK.map(([name, id, region, county]) => ({ name, id, region, county: county || '其他' }));
 
-// 區域排序
-const REGION_ORDER = ['北部','中部','海線','南部','東部','南迴線','內灣支線','集集支線','平溪支線','深澳支線','其他'];
+// 大區排序
+const REGION_ORDER = ['北部','中部','南部','東部'];
 
-let STATIONS_BY_REGION = {};
+// 縣市排序(每個大區內的縣市顯示順序)
+const COUNTY_ORDER = {
+  '北部': ['基隆市','新北市','台北市','桃園市','新竹縣','新竹市'],
+  '中部': ['苗栗縣','台中市','彰化縣','南投縣','雲林縣'],
+  '南部': ['嘉義縣','嘉義市','台南市','高雄市','屏東縣'],
+  '東部': ['宜蘭縣','花蓮縣','台東縣']
+};
+
+// 兩層索引:大區 -> 縣市 -> 車站陣列
+let STATIONS_BY_REGION_COUNTY = {};
 function rebuildStationIndex() {
-  STATIONS_BY_REGION = {};
+  STATIONS_BY_REGION_COUNTY = {};
   STATION_DATA.forEach(s => {
-    (STATIONS_BY_REGION[s.region] = STATIONS_BY_REGION[s.region] || []).push(s);
+    if (!STATIONS_BY_REGION_COUNTY[s.region]) STATIONS_BY_REGION_COUNTY[s.region] = {};
+    if (!STATIONS_BY_REGION_COUNTY[s.region][s.county]) STATIONS_BY_REGION_COUNTY[s.region][s.county] = [];
+    STATIONS_BY_REGION_COUNTY[s.region][s.county].push(s);
   });
 }
 rebuildStationIndex();
 
 function findStation(name) { return STATION_DATA.find(s => s.name === name); }
 
+
 // 嘗試從 TDX 抓真實全車站名單,成功則覆蓋本機 fallback
 async function loadStationsFromTdx() {
   if (!getCredentials()) return;
-  const cached = localStorage.getItem('tdx_stations_v2');
-  const cachedTime = parseInt(localStorage.getItem('tdx_stations_v2_time') || '0');
+  const cached = localStorage.getItem('tdx_stations_v3');
+  const cachedTime = parseInt(localStorage.getItem('tdx_stations_v3_time') || '0');
   // 7 天有效
   if (cached && Date.now() - cachedTime < 7*24*60*60*1000) {
     try {
@@ -650,31 +731,44 @@ async function loadStationsFromTdx() {
     const arr = data?.Stations || data;
     if (!Array.isArray(arr) || arr.length === 0) return;
 
+    // 用 fallback 的 id->縣市 對照表
+    const idToCounty = {};
+    const idToRegion = {};
+    STATION_FALLBACK.forEach(([n, id, region, county]) => {
+      idToCounty[id] = county;
+      idToRegion[id] = region;
+    });
+
     const stations = arr.map(item => {
       const id = item.StationID || item.StationCode;
       const name = item.StationName?.Zh_tw || item.StationName || '';
-      // 用 ID 推斷分區
-      const idNum = parseInt(id) || 0;
-      let region = '其他';
-      if (idNum >= 900 && idNum < 1300) region = '北部';
-      else if (idNum >= 2900 && idNum < 2910) region = '集集支線';
-      else if (idNum >= 3140 && idNum < 3380) region = '中部';
-      else if (idNum >= 3380 && idNum < 4070) region = '中部';
-      else if (idNum >= 4070 && idNum < 4230) region = '海線';
-      else if (idNum >= 4100 && idNum < 5120) region = '南部';
-      else if (idNum >= 5120 && idNum < 5230) region = '南迴線';
-      else if (idNum >= 5940 && idNum < 7000) region = '東部';
-      else if (idNum >= 7000 && idNum < 7140) region = '東部';
-      else if (idNum >= 7140 && idNum < 7340) region = '東部';
-      else if (idNum >= 7340 && idNum < 7400) region = '北部';
-      return { name, id, region };
+      // 優先用 fallback 的縣市對照,沒有就用 ID 推斷大區
+      let region = idToRegion[id];
+      let county = idToCounty[id];
+      if (!region) {
+        const idNum = parseInt(id) || 0;
+        if (idNum >= 900 && idNum < 1300) region = '北部';
+        else if (idNum >= 2900 && idNum < 2910) region = '中部';
+        else if (idNum >= 3140 && idNum < 3380) region = '中部';
+        else if (idNum >= 3380 && idNum < 4070) region = '中部';
+        else if (idNum >= 4070 && idNum < 4230) region = '中部';
+        else if (idNum >= 4100 && idNum < 5160) region = '南部';
+        else if (idNum >= 5160 && idNum < 5940) region = '東部';
+        else if (idNum >= 5940 && idNum < 7000) region = '東部';
+        else if (idNum >= 7000 && idNum < 7140) region = '東部';
+        else if (idNum >= 7140 && idNum < 7340) region = '東部';
+        else if (idNum >= 7340 && idNum < 7400) region = '北部';
+        else region = '其他';
+      }
+      if (!county) county = '其他';
+      return { name, id, region, county };
     }).filter(s => s.name && s.id);
 
     if (stations.length >= 50) {
       STATION_DATA = stations;
       rebuildStationIndex();
-      localStorage.setItem('tdx_stations_v2', JSON.stringify(stations));
-      localStorage.setItem('tdx_stations_v2_time', String(Date.now()));
+      localStorage.setItem('tdx_stations_v3', JSON.stringify(stations));
+      localStorage.setItem('tdx_stations_v3_time', String(Date.now()));
       console.log(`[TDX] 載入 ${stations.length} 個車站`);
     }
   } catch (e) {
@@ -749,10 +843,14 @@ function clearDateTime() {
   showToast('已清除,將列出今日全部班次');
 }
 
+// nav: { level: 'region' | 'county' | 'station', region?, county? }
+let stationNav = { level: 'region' };
+
 function openStation(which) {
   state.selectingStation = which;
   document.getElementById('stationModalTitle').textContent = which === 'from' ? '選擇起站' : '選擇訖站';
   document.getElementById('stationSearch').value = '';
+  stationNav = { level: 'region' };
   renderStations('');
   document.getElementById('stationModal').classList.add('show');
 }
@@ -762,7 +860,7 @@ function renderStations(filter) {
   list.innerHTML = '';
   const current = state.selectingStation === 'from' ? state.from : state.to;
 
-  // 有搜尋字串時:跨區整合顯示為單一「搜尋結果」清單
+  // ===== 模式 A:有搜尋字串 → 直接列出所有匹配車站(跨區跨縣市)=====
   if (filter) {
     const allMatches = STATION_DATA.filter(s => s.name.includes(filter));
     if (allMatches.length === 0) {
@@ -777,7 +875,8 @@ function renderStations(filter) {
     allMatches.forEach(s => {
       const btn = document.createElement('button');
       btn.className = 'station-item' + (s.name === current ? ' selected' : '');
-      btn.textContent = s.name;
+      // 顯示車站名 + 縣市小字
+      btn.innerHTML = s.name + '<div style="font-size:12px;color:#A0A0A8;margin-top:2px;font-weight:400">' + s.county + '</div>';
       btn.onclick = () => selectStation(s.name);
       grid.appendChild(btn);
     });
@@ -786,16 +885,73 @@ function renderStations(filter) {
     return;
   }
 
-  // 無搜尋字串:依 REGION_ORDER 順序顯示
-  const orderedRegions = REGION_ORDER.filter(r => STATIONS_BY_REGION[r])
-    .concat(Object.keys(STATIONS_BY_REGION).filter(r => !REGION_ORDER.includes(r)));
+  // ===== 模式 B:無搜尋字串 → 階層導覽 =====
+  // 麵包屑導覽列
+  if (stationNav.level !== 'region') {
+    const breadcrumb = document.createElement('div');
+    breadcrumb.style.cssText = 'display:flex;gap:8px;align-items:center;padding:8px 0 16px;font-size:15px';
+    let html = '<button onclick="navToRegion()" style="background:#F2F2F7;border:none;color:#185FA5;font-weight:600;padding:8px 14px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:15px">← 全部區域</button>';
+    if (stationNav.level === 'station') {
+      html += '<span style="color:#C7C7CC">/</span>';
+      html += '<button onclick="navToCounty(\'' + stationNav.region + '\')" style="background:#F2F2F7;border:none;color:#185FA5;font-weight:600;padding:8px 14px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:15px">' + stationNav.region + '</button>';
+      html += '<span style="color:#C7C7CC">/</span>';
+      html += '<span style="font-weight:700;color:#1C1C1E">' + stationNav.county + '</span>';
+    } else {
+      html += '<span style="color:#C7C7CC">/</span>';
+      html += '<span style="font-weight:700;color:#1C1C1E">' + stationNav.region + '</span>';
+    }
+    breadcrumb.innerHTML = html;
+    list.appendChild(breadcrumb);
+  }
 
-  for (const region of orderedRegions) {
-    const stations = STATIONS_BY_REGION[region] || [];
-    if (stations.length === 0) continue;
-    const group = document.createElement('div');
-    group.className = 'station-group';
-    group.innerHTML = '<div class="group-title">' + region + ' (' + stations.length + ')</div>';
+  if (stationNav.level === 'region') {
+    // 第 1 層:四大區
+    const grid = document.createElement('div');
+    grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:12px';
+    const colors = {
+      '北部': { bg: '#E6F1FB', border: '#185FA5', text: '#0C447C', icon: '🏙' },
+      '中部': { bg: '#E1F5EE', border: '#085041', text: '#085041', icon: '🌾' },
+      '南部': { bg: '#FAECE7', border: '#A0410C', text: '#712B13', icon: '🌴' },
+      '東部': { bg: '#EEEDFE', border: '#3C3489', text: '#3C3489', icon: '🌊' }
+    };
+    REGION_ORDER.forEach(region => {
+      const stations = STATIONS_BY_REGION_COUNTY[region];
+      if (!stations) return;
+      const totalCount = Object.values(stations).reduce((a, c) => a + c.length, 0);
+      const c = colors[region] || { bg: '#F2F2F7', border: '#C7C7CC', text: '#1C1C1E', icon: '📍' };
+      const btn = document.createElement('button');
+      btn.style.cssText = 'padding:24px 16px;font-size:24px;font-weight:700;background:' + c.bg + ';border:2px solid ' + c.border + ';border-radius:14px;color:' + c.text + ';cursor:pointer;font-family:inherit;min-height:120px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px';
+      btn.innerHTML = '<div style="font-size:36px">' + c.icon + '</div><div>' + region + '</div><div style="font-size:14px;font-weight:500;opacity:0.7">' + totalCount + ' 站</div>';
+      btn.onclick = () => navToCounty(region);
+      grid.appendChild(btn);
+    });
+    list.appendChild(grid);
+    return;
+  }
+
+  if (stationNav.level === 'county') {
+    // 第 2 層:該大區的縣市
+    const counties = STATIONS_BY_REGION_COUNTY[stationNav.region] || {};
+    const orderedCounties = (COUNTY_ORDER[stationNav.region] || []).filter(c => counties[c])
+      .concat(Object.keys(counties).filter(c => !(COUNTY_ORDER[stationNav.region] || []).includes(c)));
+
+    const grid = document.createElement('div');
+    grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:10px';
+    orderedCounties.forEach(county => {
+      const stationCount = counties[county].length;
+      const btn = document.createElement('button');
+      btn.style.cssText = 'padding:20px 12px;font-size:20px;font-weight:600;background:#F2F2F7;border:1.5px solid #E5E5EA;border-radius:12px;color:#1C1C1E;cursor:pointer;font-family:inherit;min-height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px';
+      btn.innerHTML = '<div>' + county + '</div><div style="font-size:13px;font-weight:500;color:#6B6B70">' + stationCount + ' 站</div>';
+      btn.onclick = () => navToStation(stationNav.region, county);
+      grid.appendChild(btn);
+    });
+    list.appendChild(grid);
+    return;
+  }
+
+  if (stationNav.level === 'station') {
+    // 第 3 層:該縣市的所有車站
+    const stations = (STATIONS_BY_REGION_COUNTY[stationNav.region] || {})[stationNav.county] || [];
     const grid = document.createElement('div');
     grid.className = 'station-list';
     stations.forEach(s => {
@@ -805,13 +961,29 @@ function renderStations(filter) {
       btn.onclick = () => selectStation(s.name);
       grid.appendChild(btn);
     });
-    group.appendChild(grid);
-    list.appendChild(group);
+    list.appendChild(grid);
+    return;
   }
 }
 
+function navToRegion() {
+  stationNav = { level: 'region' };
+  renderStations('');
+}
+function navToCounty(region) {
+  stationNav = { level: 'county', region };
+  renderStations('');
+}
+function navToStation(region, county) {
+  stationNav = { level: 'station', region, county };
+  renderStations('');
+}
+
 function filterStations() {
-  renderStations(document.getElementById('stationSearch').value.trim());
+  const v = document.getElementById('stationSearch').value.trim();
+  // 如果有搜尋字串,自動回到 region 層(避免被困在某縣市內看不到結果)
+  if (v) stationNav = { level: 'region' };
+  renderStations(v);
 }
 
 function selectStation(s) {
